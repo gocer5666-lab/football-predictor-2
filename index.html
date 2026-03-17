@@ -524,34 +524,72 @@ function mockStandings(lid) {
 async function loadPredictions() {
   document.getElementById('match-list').innerHTML = [1,2,3,4].map(()=>`<div class="skeleton sk-card"></div>`).join('')
 
-  let preds
+  let preds = null
+  let isReal = false
+
   if (state.apiKey) {
     preds = await fetchRealPredictions()
+    isReal = preds && preds.length > 0
   }
-  if (!preds || !preds.length) preds = mockPredictions()
+
+  // API key var ama maç yok → gerçekten maç yok mesajı göster
+  if (state.apiKey && preds !== null && preds.length === 0) {
+    state.predictions = []
+    updateStats([])
+    const today = new Date().toLocaleDateString('tr-TR',{day:'numeric',month:'long',year:'numeric'})
+    document.getElementById('match-list').innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">📅</div>
+        <h3>Bugün Maç Yok</h3>
+        <p>${today} tarihinde seçili liglerde programlanmış maç bulunmuyor.<br/>Yarın tekrar kontrol edin.</p>
+      </div>`
+    return
+  }
+
+  // API key yok → demo veriler
+  if (!preds || !preds.length) {
+    preds = mockPredictions()
+    // Demo olduğunu belirt
+    document.getElementById('api-status-text').textContent = 'Demo Veri'
+  }
 
   state.predictions = preds
   updateStats(preds)
   renderPredictions()
 }
 
+const LEAGUE_FLAGS = {
+  203:'🇹🇷', 39:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', 140:'🇪🇸', 78:'🇩🇪', 135:'🇮🇹',
+  61:'🇫🇷', 2:'🏆', 3:'🏆', 88:'🇳🇱', 94:'🇵🇹', 253:'🇺🇸', 71:'🇧🇷'
+}
+
 async function fetchRealPredictions() {
   const today = new Date().toISOString().split('T')[0]
-  const fixtures = await apiFetch('fixtures', {date:today, season:2024})
-  if (!fixtures || !fixtures.length) return null
+
+  // Önce 2025, olmadı 2024 dene
+  let fixtures = await apiFetch('fixtures', {date:today, season:2025})
+  if (!fixtures || !fixtures.length) {
+    fixtures = await apiFetch('fixtures', {date:today, season:2024})
+  }
+  if (!fixtures || !fixtures.length) return []
 
   setApiStatus(true)
   const results = []
 
-  for (const fix of fixtures.slice(0,20)) {
+  for (const fix of fixtures.slice(0,15)) {
     const fid = fix.fixture.id
     const pred = await apiFetch('predictions', {fixture:fid})
-    if (!pred || !pred[0]) continue
+    if (!pred || !pred[0]) {
+      // Predictions yoksa fixture'dan tahmin üret
+      results.push(buildFromFixture(fix))
+      continue
+    }
 
     const p = pred[0].predictions || {}
     const pct = v => { try{return parseInt(String(v).replace('%',''))}catch{return 33} }
-    let hp=pct(p.percent?.home), dp=pct(p.percent?.draw), ap=pct(p.percent?.away)
-    const tot=(hp+dp+ap)||100; hp=Math.round(hp/tot*100); dp=Math.round(dp/tot*100); ap=100-hp-dp
+    let hp=pct(p.percent?.home||'33%'), dp=pct(p.percent?.draw||'33%'), ap=pct(p.percent?.away||'33%')
+    const tot=(hp+dp+ap)||100
+    hp=Math.round(hp/tot*100); dp=Math.round(dp/tot*100); ap=100-hp-dp
     const mx=Math.max(hp,dp,ap)
     const pick=mx===hp?'1':mx===dp?'X':'2'
     const conf=mx
@@ -561,15 +599,38 @@ async function fetchRealPredictions() {
       time: new Date(fix.fixture.date).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'}),
       home: fix.teams.home.name, homeLogo: fix.teams.home.id,
       away: fix.teams.away.name, awayLogo: fix.teams.away.id,
-      league: fix.league.name, leagueFlag: '🏆', leagueId: fix.league.id,
+      league: fix.league.name,
+      leagueFlag: LEAGUE_FLAGS[fix.league.id] || '🏆',
+      leagueId: fix.league.id,
       pick, conf, probs:{home:hp,draw:dp,away:ap},
       over25: 40+Math.floor(Math.random()*35), kg: Math.random()>0.45,
       value: conf>=62?'HIGH':conf>=50?'MEDIUM':'LOW',
-      signals:[{type:'api',text:'API Football tahmin motoru'}],
+      signals:[{type:'api',text:'API Football tahmin motoru kullanıldı'}],
       odds:{h:+(1.5+Math.random()*2).toFixed(2),x:+(2.8+Math.random()).toFixed(2),a:+(2.2+Math.random()*3).toFixed(2)},
     })
   }
   return results
+}
+
+function buildFromFixture(fix) {
+  // Predictions endpoint'i yoksa basit tahmin üret
+  const conf = 48 + Math.floor(Math.random()*20)
+  const home = conf, draw = Math.floor((100-conf)*0.4), away = 100-home-draw
+  const pick = home>=draw&&home>=away?'1':draw>=away?'X':'2'
+  return {
+    id: fix.fixture.id,
+    time: new Date(fix.fixture.date).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'}),
+    home: fix.teams.home.name, homeLogo: fix.teams.home.id,
+    away: fix.teams.away.name, awayLogo: fix.teams.away.id,
+    league: fix.league.name,
+    leagueFlag: LEAGUE_FLAGS[fix.league.id] || '🏆',
+    leagueId: fix.league.id,
+    pick, conf, probs:{home,draw,away},
+    over25: 35+Math.floor(Math.random()*40), kg: Math.random()>0.5,
+    value: conf>=62?'HIGH':conf>=50?'MEDIUM':'LOW',
+    signals:[{type:'home',text:'Ev sahibi avantajı'}],
+    odds:{h:+(1.5+Math.random()*2).toFixed(2),x:+(2.8+Math.random()).toFixed(2),a:+(2.2+Math.random()*3).toFixed(2)},
+  }
 }
 
 function updateStats(preds) {
@@ -694,7 +755,8 @@ async function loadStandings(lid) {
 
   let data
   if (state.apiKey) {
-    const raw = await apiFetch('standings', {league:lid, season:2024})
+    let raw = await apiFetch('standings', {league:lid, season:2025})
+    if (!raw || !raw.length) raw = await apiFetch('standings', {league:lid, season:2024})
     if (raw && raw[0]) {
       try { data = raw[0].league.standings[0] } catch{}
     }
