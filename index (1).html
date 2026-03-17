@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>FootballIQ — Tahmin & Analiz</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg0: #060908;
+  --bg1: #0b110d;
+  --bg2: #101810;
+  --bg3: #162019;
+  --bg4: #1d2b20;
+  --bg5: #243325;
+  --line1: rgba(255,255,255,0.05);
+  --line2: rgba(255,255,255,0.10);
+  --line3: rgba(255,255,255,0.18);
+  --lime: #b5f23a;
+  --lime2: #8fd420;
+  --text: #e8efe8;
+  --muted: #6b7d6b;
+  --muted2: #4a5a4a;
+  --blue: #4a9eff;
+  --amber: #ffb347;
+  --violet: #a78bfa;
+  --red: #f87171;
+  --green: #4ade80;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg0);color:var(--text);font-family:'Syne',sans-serif;-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-track{background:var(--bg1)}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px}
+
+/* LAYOUT */
+.app{display:flex;flex-direction:column;min-height:100vh}
+.topbar{background:var(--bg1);border-bottom:1px solid var(--line1);position:sticky;top:0;z-index:100;backdrop-filter:blur(12px)}
+.topbar-inner{max-width:1100px;margin:0 auto;padding:0 20px;height:56px;display:flex;align-items:center;gap:16px}
+.logo{display:flex;align-items:center;gap:10px;shrink:0}
+.logo-icon{width:32px;height:32px;border-radius:10px;background:rgba(181,242,58,0.12);border:1px solid rgba(181,242,58,0.3);display:flex;align-items:center;justify-content:center;font-size:16px}
+.logo-text{font-size:15px;font-weight:800;letter-spacing:0.5px;color:var(--text)}
+.logo-sub{font-size:10px;color:var(--muted);font-weight:400;letter-spacing:1px;text-transform:uppercase}
+.tabs{display:flex;gap:2px;background:var(--bg2);border:1px solid var(--line1);border-radius:12px;padding:3px;margin-left:auto}
+.tab{padding:6px 16px;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;color:var(--muted);border:none;background:none;font-family:'Syne',sans-serif;letter-spacing:0.3px;display:flex;align-items:center;gap:6px}
+.tab:hover{color:var(--text)}
+.tab.active{background:var(--bg4);color:var(--lime);border:1px solid rgba(181,242,58,0.2)}
+.tab-badge{width:18px;height:18px;border-radius:50%;background:var(--lime);color:var(--bg0);font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center}
+.api-status{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--muted2)}
+.dot.live{background:var(--green);box-shadow:0 0 8px var(--green);animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.4}}
+
+/* LEAGUE FILTER */
+.league-bar{background:var(--bg1);border-bottom:1px solid var(--line1);position:sticky;top:56px;z-index:90}
+.league-bar-inner{max-width:1100px;margin:0 auto;padding:8px 20px;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+.league-bar-inner::-webkit-scrollbar{display:none}
+.lbtn{padding:5px 12px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;transition:all 0.2s;color:var(--muted);background:var(--bg2);border:1px solid var(--line1);font-family:'Syne',sans-serif;white-space:nowrap;display:flex;align-items:center;gap:5px}
+.lbtn:hover{color:var(--text);border-color:var(--line2)}
+.lbtn.active{background:var(--bg4);color:var(--text);border-color:var(--line3)}
+
+/* CONTENT */
+.content{max-width:1100px;margin:0 auto;padding:24px 20px;flex:1}
+.page{display:none}.page.active{display:block}
+
+/* SETTINGS BANNER */
+.settings-banner{background:linear-gradient(135deg,rgba(181,242,58,0.08),rgba(181,242,58,0.03));border:1px solid rgba(181,242,58,0.2);border-radius:16px;padding:20px 24px;margin-bottom:24px;display:flex;align-items:center;gap:16px}
+.settings-banner.hidden{display:none}
+.settings-banner-icon{font-size:28px}
+.settings-banner-text h3{font-size:15px;font-weight:700;color:var(--lime);margin-bottom:4px}
+.settings-banner-text p{font-size:12px;color:var(--muted);line-height:1.5}
+.settings-banner-actions{margin-left:auto;display:flex;gap:8px;flex-shrink:0}
+.btn{padding:8px 18px;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;font-family:'Syne',sans-serif;border:none}
+.btn-lime{background:var(--lime);color:var(--bg0)}
+.btn-lime:hover{background:var(--lime2)}
+.btn-ghost{background:var(--bg3);color:var(--muted);border:1px solid var(--line2)}
+.btn-ghost:hover{color:var(--text)}
+
+/* API KEY MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.modal-overlay.hidden{display:none}
+.modal{background:var(--bg2);border:1px solid var(--line2);border-radius:20px;padding:28px;width:100%;max-width:440px;margin:20px}
+.modal h2{font-size:18px;font-weight:800;margin-bottom:6px}
+.modal p{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:20px}
+.modal-input{width:100%;padding:12px 16px;background:var(--bg3);border:1px solid var(--line2);border-radius:12px;color:var(--text);font-size:14px;font-family:'JetBrains Mono',monospace;outline:none;transition:border 0.2s;margin-bottom:16px}
+.modal-input:focus{border-color:rgba(181,242,58,0.4)}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end}
+
+/* STATS ROW */
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px}
+.stat-card{background:var(--bg2);border:1px solid var(--line1);border-radius:14px;padding:16px 20px}
+.stat-val{font-size:32px;font-weight:800;font-family:'JetBrains Mono',monospace;line-height:1}
+.stat-val.lime{color:var(--lime)}
+.stat-val.amber{color:var(--amber)}
+.stat-val.blue{color:var(--blue)}
+.stat-label{font-size:11px;color:var(--muted);margin-top:6px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase}
+
+/* FILTERS */
+.filters{display:flex;gap:6px;margin-bottom:20px;background:var(--bg2);border:1px solid var(--line1);border-radius:12px;padding:4px;width:fit-content}
+.fbtn{padding:6px 14px;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;transition:all 0.2s;color:var(--muted);background:none;border:none;font-family:'Syne',sans-serif}
+.fbtn:hover{color:var(--text)}
+.fbtn.active{background:var(--bg4);color:var(--text);border:1px solid var(--line3)}
+
+/* MATCH CARD */
+.match-list{display:flex;flex-direction:column;gap:12px}
+.match-card{background:var(--bg2);border:1px solid var(--line1);border-radius:18px;padding:18px 20px;transition:border-color 0.2s;animation:fadeUp 0.3s ease-out both}
+.match-card:hover{border-color:var(--line2)}
+.match-card.high-value{border-color:rgba(181,242,58,0.2)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.league-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:6px;background:var(--bg3);border:1px solid var(--line1);font-size:11px;font-weight:700;color:var(--muted)}
+.card-badges{display:flex;align-items:center;gap:6px}
+.value-badge{padding:3px 8px;border-radius:6px;background:rgba(181,242,58,0.1);border:1px solid rgba(181,242,58,0.2);font-size:10px;font-weight:800;color:var(--lime);letter-spacing:0.5px}
+.time-badge{font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace}
+.teams-row{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.team{flex:1;display:flex;align-items:center;gap:10px}
+.team.away{justify-content:flex-end;flex-direction:row-reverse}
+.team-logo{width:38px;height:38px;border-radius:50%;background:var(--bg4);border:1px solid var(--line2);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0}
+.team-logo img{width:26px;height:26px;object-fit:contain}
+.team-logo-fb{font-size:13px;font-weight:800;color:var(--muted)}
+.team-name{font-size:14px;font-weight:700;color:var(--text);line-height:1.2}
+.pick-chip{padding:8px 16px;border-radius:12px;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:18px;border:2px solid;flex-shrink:0;text-align:center}
+.pick-1{background:rgba(74,158,255,0.1);border-color:rgba(74,158,255,0.3);color:var(--blue)}
+.pick-x{background:rgba(255,179,71,0.1);border-color:rgba(255,179,71,0.3);color:var(--amber)}
+.pick-2{background:rgba(167,139,250,0.1);border-color:rgba(167,139,250,0.3);color:var(--violet)}
+.prob-bars{margin-bottom:14px}
+.prob-row{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.prob-label{font-size:10px;color:var(--muted);width:72px;font-weight:700;flex-shrink:0}
+.prob-track{flex:1;height:4px;background:var(--bg4);border-radius:2px;overflow:hidden}
+.prob-fill{height:100%;border-radius:2px;transition:width 0.8s cubic-bezier(0.4,0,0.2,1)}
+.prob-fill.b{background:var(--blue)}
+.prob-fill.a{background:var(--amber)}
+.prob-fill.v{background:var(--violet)}
+.prob-val{font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--text);width:28px;text-align:right;flex-shrink:0}
+.card-footer{display:flex;align-items:center;gap:8px;padding-top:12px;border-top:1px solid var(--line1);flex-wrap:wrap}
+.pick-btn{padding:6px 14px;border-radius:10px;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;cursor:pointer;transition:all 0.2s;border:1px solid}
+.pick-btn.b{background:rgba(74,158,255,0.08);border-color:rgba(74,158,255,0.2);color:var(--blue)}
+.pick-btn.b:hover{background:rgba(74,158,255,0.18)}
+.pick-btn.a{background:rgba(255,179,71,0.08);border-color:rgba(255,179,71,0.2);color:var(--amber)}
+.pick-btn.a:hover{background:rgba(255,179,71,0.18)}
+.pick-btn.v{background:rgba(167,139,250,0.08);border-color:rgba(167,139,250,0.2);color:var(--violet)}
+.pick-btn.v:hover{background:rgba(167,139,250,0.18)}
+.pick-btn.selected{outline:2px solid var(--lime);outline-offset:1px;transform:scale(1.04)}
+.footer-info{margin-left:auto;display:flex;gap:14px}
+.fi{font-size:11px;color:var(--muted)}
+.fi span{color:var(--text);font-weight:700;font-family:'JetBrains Mono',monospace}
+.fi span.lime{color:var(--lime)}
+.fi span.amber{color:var(--amber)}
+.signals-toggle{width:100%;display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);cursor:pointer;background:none;border:none;font-family:'Syne',sans-serif;margin-top:8px;padding:4px 0}
+.signals-toggle:hover{color:var(--text)}
+.signals-wrap{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.signal-tag{padding:3px 8px;border-radius:6px;font-size:10px;font-weight:700;border:1px solid}
+.st-form{background:rgba(181,242,58,0.08);border-color:rgba(181,242,58,0.2);color:var(--lime)}
+.st-xg{background:rgba(255,179,71,0.08);border-color:rgba(255,179,71,0.2);color:var(--amber)}
+.st-h2h{background:rgba(74,158,255,0.08);border-color:rgba(74,158,255,0.2);color:var(--blue)}
+.st-home{background:rgba(167,139,250,0.08);border-color:rgba(167,139,250,0.2);color:var(--violet)}
+
+/* STANDINGS */
+.standings-leagues{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px}
+.table-wrap{background:var(--bg2);border:1px solid var(--line1);border-radius:16px;overflow:hidden}
+.table-header{display:grid;padding:10px 16px;border-bottom:1px solid var(--line1);font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px}
+.table-row{display:grid;padding:10px 16px;border-bottom:1px solid var(--line1);transition:background 0.15s;align-items:center}
+.table-row:last-child{border-bottom:none}
+.table-row:hover{background:rgba(255,255,255,0.02)}
+.table-cols{grid-template-columns:28px 1fr 36px 36px 36px 36px 36px 36px 36px 60px 36px}
+.zone-bar{width:3px;height:20px;border-radius:2px;margin-right:6px;flex-shrink:0}
+.team-cell{display:flex;align-items:center;gap:8px;min-width:0}
+.team-logo-sm{width:20px;height:20px;object-fit:contain}
+.team-logo-sm-fb{width:20px;height:20px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:var(--muted);flex-shrink:0}
+.team-name-sm{font-size:13px;font-weight:600;truncate:ellipsis;overflow:hidden;white-space:nowrap}
+.tc{text-align:center;font-size:12px;font-family:'JetBrains Mono',monospace}
+.tc.lime{color:var(--lime);font-weight:700}
+.tc.red{color:var(--red)}
+.tc.amber{color:var(--amber)}
+.tc.muted{color:var(--muted)}
+.form-dots{display:flex;gap:3px;justify-content:center}
+.fd{width:14px;height:14px;border-radius:50%;flex-shrink:0}
+.fd.w{background:var(--lime)}
+.fd.d{background:var(--amber)}
+.fd.l{background:var(--red)}
+.pts{font-size:16px;font-weight:800;font-family:'JetBrains Mono',monospace;text-align:right}
+.legend{display:flex;gap:16px;padding:10px 16px;border-top:1px solid var(--line1);flex-wrap:wrap}
+.leg-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)}
+.leg-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+
+/* COUPONS */
+.coupon-grid{display:grid;grid-template-columns:1fr 380px;gap:20px;align-items:start}
+@media(max-width:768px){.coupon-grid{grid-template-columns:1fr}}
+.coupon-builder{background:var(--bg2);border:1px solid var(--line1);border-radius:18px;padding:20px}
+.coupon-builder h2{font-size:16px;font-weight:800;margin-bottom:4px}
+.coupon-builder p{font-size:12px;color:var(--muted);margin-bottom:16px}
+.picks-list{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.pick-item{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg3);border:1px solid var(--line1);border-radius:12px}
+.pick-item-info{flex:1;min-width:0}
+.pick-item-match{font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pick-item-league{font-size:10px;color:var(--muted);margin-top:1px}
+.pick-item-pick{font-family:'JetBrains Mono',monospace;font-weight:800;font-size:13px;padding:3px 10px;border-radius:7px;border:1px solid;flex-shrink:0}
+.pick-item-odd{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;color:var(--lime);flex-shrink:0}
+.pick-remove{background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;line-height:1;padding:2px 4px;transition:color 0.2s;flex-shrink:0}
+.pick-remove:hover{color:var(--red)}
+.empty-picks{text-align:center;padding:32px;color:var(--muted)}
+.empty-picks-icon{font-size:36px;margin-bottom:8px}
+.empty-picks p{font-size:13px;line-height:1.5}
+.coupon-type{display:flex;gap:6px;margin-bottom:16px}
+.type-btn{flex:1;padding:8px;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer;transition:all 0.2s;color:var(--muted);background:var(--bg3);border:1px solid var(--line1);font-family:'Syne',sans-serif}
+.type-btn.active{border-color:rgba(181,242,58,0.3);background:rgba(181,242,58,0.08);color:var(--lime)}
+.system-opts{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px}
+.sys-btn{padding:5px 10px;border-radius:8px;font-size:10px;font-weight:700;cursor:pointer;transition:all 0.2s;color:var(--muted);background:var(--bg3);border:1px solid var(--line1);font-family:'Syne',sans-serif}
+.sys-btn.active{border-color:rgba(255,179,71,0.3);background:rgba(255,179,71,0.08);color:var(--amber)}
+.stake-row{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.stake-label{font-size:12px;color:var(--muted);flex-shrink:0;font-weight:700}
+.stake-input{flex:1;padding:9px 14px;background:var(--bg3);border:1px solid var(--line2);border-radius:10px;color:var(--text);font-size:14px;font-family:'JetBrains Mono',monospace;outline:none}
+.stake-input:focus{border-color:rgba(181,242,58,0.4)}
+.calc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
+.calc-box{background:var(--bg3);border:1px solid var(--line1);border-radius:12px;padding:12px;text-align:center}
+.calc-box.highlight{background:rgba(181,242,58,0.08);border-color:rgba(181,242,58,0.2)}
+.calc-val{font-size:20px;font-weight:800;font-family:'JetBrains Mono',monospace}
+.calc-val.lime{color:var(--lime)}
+.calc-val.amber{color:var(--amber)}
+.calc-lbl{font-size:10px;color:var(--muted);margin-top:4px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px}
+.save-row{display:flex;gap:8px}
+.name-input{flex:1;padding:9px 14px;background:var(--bg3);border:1px solid var(--line2);border-radius:10px;color:var(--text);font-size:13px;font-family:'Syne',sans-serif;outline:none}
+.name-input:focus{border-color:rgba(181,242,58,0.4)}
+.name-input::placeholder{color:var(--muted)}
+.coupon-history{display:flex;flex-direction:column;gap:10px}
+.saved-coupon{background:var(--bg2);border:1px solid var(--line1);border-radius:16px;padding:16px}
+.sc-header{display:flex;align-items:start;justify-content:space-between;margin-bottom:10px}
+.sc-name{font-size:14px;font-weight:800}
+.sc-date{font-size:10px;color:var(--muted);margin-top:2px}
+.sc-status{padding:3px 10px;border-radius:7px;font-size:10px;font-weight:800;border:1px solid}
+.sc-picks{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.sc-pick-row{display:flex;align-items:center;gap:8px;font-size:11px}
+.sc-footer{display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--line1)}
+.sc-info{font-size:11px;color:var(--muted)}
+.sc-odd{font-size:20px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--lime)}
+.sc-win{font-size:11px;color:var(--muted)}
+.sc-win span{color:var(--lime);font-weight:700}
+.del-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;transition:color 0.2s}
+.del-btn:hover{color:var(--red)}
+.no-coupons{text-align:center;padding:48px;color:var(--muted);font-size:13px}
+
+/* AUTO COUPON */
+.auto-btn{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border-radius:12px;border:1.5px dashed rgba(181,242,58,0.25);background:rgba(181,242,58,0.04);color:var(--lime);font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;font-family:'Syne',sans-serif;margin-bottom:12px}
+.auto-btn:hover{background:rgba(181,242,58,0.08);border-color:rgba(181,242,58,0.4)}
+
+/* LOADING */
+.skeleton{background:linear-gradient(90deg,var(--bg2) 25%,var(--bg3) 50%,var(--bg2) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:14px}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.sk-card{height:180px;margin-bottom:12px}
+
+/* EMPTY */
+.empty-state{text-align:center;padding:64px 20px;color:var(--muted)}
+.empty-state-icon{font-size:48px;margin-bottom:12px;opacity:0.4}
+.empty-state h3{font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px}
+.empty-state p{font-size:13px;line-height:1.6}
+
+/* RESPONSIVE */
+@media(max-width:600px){
+  .stats-row{grid-template-columns:repeat(3,1fr)}
+  .table-cols{grid-template-columns:24px 1fr 30px 30px 30px 30px 30px 30px 30px 48px 30px}
+  .teams-row .team-name{font-size:12px}
+  .tabs .tab{padding:6px 10px;font-size:11px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="logo">
+      <div class="logo-icon">⚡</div>
+      <div>
+        <div class="logo-text">FootballIQ</div>
+        <div class="logo-sub">Tahmin & Analiz</div>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('predictions')">📊 Tahminler</button>
+      <button class="tab" onclick="switchTab('standings')">🏆 Puan Tablosu</button>
+      <button class="tab" id="coupon-tab" onclick="switchTab('coupons')">🎫 Kupon</button>
+    </div>
+    <div class="api-status">
+      <div class="dot" id="api-dot"></div>
+      <span id="api-status-text">Demo Mod</span>
+    </div>
+  </div>
+</header>
+
+<!-- LEAGUE FILTER -->
+<div class="league-bar" id="league-bar">
+  <div class="league-bar-inner" id="league-btns"></div>
+</div>
+
+<!-- CONTENT -->
+<div class="content">
+
+  <!-- SETTINGS BANNER -->
+  <div class="settings-banner" id="settings-banner">
+    <div class="settings-banner-icon">🔑</div>
+    <div class="settings-banner-text">
+      <h3>API Key Ekle — Gerçek Veriler İçin</h3>
+      <p>Şu an demo veriler gösteriliyor. api-sports.io'dan ücretsiz key alarak gerçek maç tahminlerini görebilirsiniz.</p>
+    </div>
+    <div class="settings-banner-actions">
+      <button class="btn btn-lime" onclick="showApiModal()">Key Ekle</button>
+      <button class="btn btn-ghost" onclick="dismissBanner()">Şimdi Değil</button>
+    </div>
+  </div>
+
+  <!-- PREDICTIONS PAGE -->
+  <div class="page active" id="page-predictions">
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-val lime" id="stat-total">—</div><div class="stat-label">Toplam Maç</div></div>
+      <div class="stat-card"><div class="stat-val amber" id="stat-high">—</div><div class="stat-label">⚡ Yüksek Değer</div></div>
+      <div class="stat-card"><div class="stat-val blue" id="stat-avg">—</div><div class="stat-label">Ort. Güven</div></div>
+    </div>
+    <div class="filters">
+      <button class="fbtn active" onclick="setFilter('all',this)">Tümü</button>
+      <button class="fbtn" onclick="setFilter('high',this)">⚡ Yüksek Değer</button>
+      <button class="fbtn" onclick="setFilter('medium',this)">Orta</button>
+    </div>
+    <div class="match-list" id="match-list">
+      <div class="skeleton sk-card"></div>
+      <div class="skeleton sk-card"></div>
+      <div class="skeleton sk-card"></div>
+    </div>
+  </div>
+
+  <!-- STANDINGS PAGE -->
+  <div class="page" id="page-standings">
+    <div class="standings-leagues" id="standings-leagues"></div>
+    <div id="standings-table"></div>
+  </div>
+
+  <!-- COUPONS PAGE -->
+  <div class="page" id="page-coupons">
+    <div class="coupon-grid">
+      <div>
+        <div class="coupon-builder">
+          <h2>Kupon Oluştur</h2>
+          <p>Tahminler sayfasından seçim yapın veya otomatik öneri alın.</p>
+          <button class="auto-btn" id="auto-btn" onclick="getAutoCoupon()">✨ Otomatik Kupon Önerisi</button>
+          <div id="picks-list"></div>
+          <div id="coupon-controls" style="display:none">
+            <div class="coupon-type">
+              <button class="type-btn active" onclick="setType('kombinasyon',this)">Kombinasyon</button>
+              <button class="type-btn" onclick="setType('tekli',this)">Tekli</button>
+              <button class="type-btn" onclick="setType('sistem',this)">Sistem</button>
+            </div>
+            <div class="system-opts" id="system-opts" style="display:none"></div>
+            <div class="stake-row">
+              <span class="stake-label">Bahis (TL)</span>
+              <input type="number" class="stake-input" id="stake-input" value="100" min="10" step="10" oninput="updateCalc()"/>
+            </div>
+            <div class="calc-grid">
+              <div class="calc-box"><div class="calc-val" id="calc-odd">×1.00</div><div class="calc-lbl">Oran</div></div>
+              <div class="calc-box"><div class="calc-val amber" id="calc-stake">100</div><div class="calc-lbl">Bahis TL</div></div>
+              <div class="calc-box highlight"><div class="calc-val lime" id="calc-win">100</div><div class="calc-lbl">Kazanç TL</div></div>
+            </div>
+            <div class="save-row">
+              <input type="text" class="name-input" id="coupon-name" placeholder="Kupon adı (opsiyonel)"/>
+              <button class="btn btn-lime" onclick="saveCoupon()">💾 Kaydet</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <h2 style="font-size:16px;font-weight:800;margin-bottom:14px">Kaydedilen Kuponlar</h2>
+        <div id="coupon-history"></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /content -->
+</div><!-- /app -->
+
+<!-- API KEY MODAL -->
+<div class="modal-overlay hidden" id="api-modal">
+  <div class="modal">
+    <h2>🔑 API Key Ekle</h2>
+    <p>
+      <a href="https://dashboard.api-sports.io" target="_blank" style="color:var(--lime)">dashboard.api-sports.io</a> adresine giriş yapın.<br/>
+      Sol menüden <strong>Football → API Key</strong> bölümüne gidin ve key'inizi kopyalayın.<br/>
+      Ücretsiz planda günlük <strong>100 istek</strong> hakkınız var.
+    </p>
+    <input type="text" class="modal-input" id="api-key-input" placeholder="8e06845a0b992..." />
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeApiModal()">İptal</button>
+      <button class="btn btn-lime" onclick="saveApiKey()">Kaydet & Bağlan</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════
+const state = {
+  apiKey: localStorage.getItem('fiq_key') || '',
+  activeTab: 'predictions',
+  activeLeague: 'all',
+  filter: 'all',
+  standingsLeague: 203,
+  couponType: 'kombinasyon',
+  systemK: null,
+  picks: JSON.parse(localStorage.getItem('fiq_picks') || '[]'),
+  coupons: JSON.parse(localStorage.getItem('fiq_coupons') || '[]'),
+  predictions: [],
+  standingsData: {},
+}
+
+const LEAGUES = {
+  all:        {id:null,  name:'Tümü',            flag:'🌍'},
+  superlig:   {id:203,   name:'Süper Lig',        flag:'🇹🇷'},
+  premier:    {id:39,    name:'Premier League',   flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿'},
+  laliga:     {id:140,   name:'La Liga',          flag:'🇪🇸'},
+  bundesliga: {id:78,    name:'Bundesliga',       flag:'🇩🇪'},
+  seriea:     {id:135,   name:'Serie A',          flag:'🇮🇹'},
+  ligue1:     {id:61,    name:'Ligue 1',          flag:'🇫🇷'},
+  champions:  {id:2,     name:'Şampiyonlar',      flag:'🏆'},
+  europa:     {id:3,     name:'Avrupa Ligi',      flag:'🏆'},
+}
+
+const STANDINGS_LEAGUES = [
+  {id:203,name:'Süper Lig',flag:'🇹🇷'},
+  {id:39, name:'Premier',  flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿'},
+  {id:140,name:'La Liga',  flag:'🇪🇸'},
+  {id:78, name:'Bundesliga',flag:'🇩🇪'},
+  {id:135,name:'Serie A',  flag:'🇮🇹'},
+  {id:61, name:'Ligue 1',  flag:'🇫🇷'},
+]
+
+// ═══════════════════════════════════════════════
+// API
+// ═══════════════════════════════════════════════
+const API = 'https://v3.football.api-sports.io'
+
+async function apiFetch(endpoint, params={}) {
+  if (!state.apiKey) return null
+  const url = new URL(`${API}/${endpoint}`)
+  Object.entries(params).forEach(([k,v]) => url.searchParams.set(k,v))
+  try {
+    const r = await fetch(url, {headers:{'x-rapidapi-key':state.apiKey,'x-rapidapi-host':'v3.football.api-sports.io'}})
+    const d = await r.json()
+    if (d.errors && Object.keys(d.errors).length) { console.warn('API err',d.errors); return null }
+    return d.response || []
+  } catch(e) { console.error('fetch err',e); return null }
+}
+
+async function checkApiKey(key) {
+  try {
+    const r = await fetch(`${API}/status`, {headers:{'x-rapidapi-key':key,'x-rapidapi-host':'v3.football.api-sports.io'}})
+    const d = await r.json()
+    return !d.errors || Object.keys(d.errors).length === 0
+  } catch { return false }
+}
+
+// ═══════════════════════════════════════════════
+// MOCK DATA
+// ═══════════════════════════════════════════════
+function mockPredictions() {
+  const t = h => new Date(Date.now()+h*3600000).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'})
+  const fixtures = [
+    {id:2001,time:t(2),home:'Beşiktaş',homeLogo:628,away:'Trabzonspor',awayLogo:616,league:'Süper Lig',leagueFlag:'🇹🇷',leagueId:203},
+    {id:2002,time:t(3),home:'Arsenal',homeLogo:42,away:'Chelsea',awayLogo:49,league:'Premier League',leagueFlag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',leagueId:39},
+    {id:2003,time:t(4),home:'Bayern München',homeLogo:157,away:'Borussia Dortmund',awayLogo:165,league:'Bundesliga',leagueFlag:'🇩🇪',leagueId:78},
+    {id:2004,time:t(5),home:'Inter',homeLogo:505,away:'AC Milan',awayLogo:489,league:'Serie A',leagueFlag:'🇮🇹',leagueId:135},
+    {id:2005,time:t(6),home:'PSG',homeLogo:85,away:'Lyon',awayLogo:80,league:'Ligue 1',leagueFlag:'🇫🇷',leagueId:61},
+    {id:2006,time:t(7),home:'Real Madrid',homeLogo:541,away:'Atletico Madrid',awayLogo:530,league:'La Liga',leagueFlag:'🇪🇸',leagueId:140},
+    {id:2007,time:t(8),home:'Galatasaray',homeLogo:611,away:'Fenerbahçe',awayLogo:614,league:'Süper Lig',leagueFlag:'🇹🇷',leagueId:203},
+    {id:2008,time:t(9),home:'Barcelona',homeLogo:529,away:'Sevilla',awayLogo:536,league:'La Liga',leagueFlag:'🇪🇸',leagueId:140},
+  ]
+  return fixtures.map(f => {
+    const conf = 42 + Math.floor(Math.random()*28)
+    const home = conf
+    const draw = Math.floor((100-home)*0.42)
+    const away = 100-home-draw
+    const picks = ['1','X','2']
+    const maxP = Math.max(home,draw,away)
+    const pick = maxP===home?'1':maxP===draw?'X':'2'
+    const signals = []
+    if (Math.random()>0.4) signals.push({type:'form',text:'Ev sahibi son 5 maçta üstün form'})
+    if (Math.random()>0.5) signals.push({type:'xg',text:`xG avantajı ev sahibinde (1.8 vs 1.1)`})
+    if (Math.random()>0.6) signals.push({type:'h2h',text:'H2H: Son 5 maçta 3 galibiyet'})
+    signals.push({type:'home',text:'Ev sahibi avantajı'})
+    return {
+      ...f,
+      pick, conf,
+      probs:{home,draw,away},
+      over25: 35+Math.floor(Math.random()*45),
+      kg: Math.random()>0.45,
+      value: conf>=62?'HIGH':conf>=50?'MEDIUM':'LOW',
+      signals,
+      odds:{h:+(1.5+Math.random()*2).toFixed(2),x:+(2.8+Math.random()).toFixed(2),a:+(2.2+Math.random()*3).toFixed(2)},
+    }
+  })
+}
+
+function mockStandings(lid) {
+  const tm = {
+    203:[['Galatasaray',611],['Fenerbahçe',614],['Beşiktaş',628],['Trabzonspor',616],['Başakşehir',617],['Sivasspor',618],['Kasımpaşa',619],['Konyaspor',620],['Antalyaspor',621],['Kayserispor',622],['Samsunspor',623],['Gaziantep',624],['Hatayspor',625],['Pendikspor',626],['Rizespor',627],['Alanyaspor',629],['Çaykur Rizespor',630],['Fatih Karagümrük',631]],
+    39: [['Man. City',50],['Liverpool',40],['Arsenal',42],['Chelsea',49],['Tottenham',47],['Aston Villa',66],['Newcastle',34],['Man. United',33],['West Ham',48],['Brighton',51],['Wolves',39],['Fulham',36],['Everton',45],['Crystal Palace',52],['Brentford',55],['Nottm Forest',65],['Luton',43],['Sheffield Utd',62],['Burnley',44],['Bournemouth',35]],
+    140:[['Real Madrid',541],['Barcelona',529],['Atletico',530],['Athletic Bilbao',531],['Real Sociedad',548],['Villarreal',533],['Betis',543],['Valencia',532],['Las Palmas',534],['Rayo',546],['Mallorca',538],['Osasuna',537],['Celta Vigo',542],['Getafe',540],['Sevilla',536],['Girona',547],['Alaves',545],['Granada',535],['Almeria',544],['Cadiz',539]],
+    78: [['Bayer Leverkusen',168],['Bayern München',157],['Stuttgart',172],['Dortmund',165],['RB Leipzig',173],['Eintracht Frankfurt',169],['Freiburg',160],['Hoffenheim',167],['Werder Bremen',162],['Heidenheim',176],['Augsburg',161],['Wolfsburg',171],["M'gladbach",163],['Union Berlin',174],['Bochum',175],['Köln',164],['Mainz',170],['Darmstadt',177]],
+    135:[['Inter',505],['AC Milan',489],['Juventus',496],['Atalanta',499],['Bologna',500],['Roma',497],['Lazio',487],['Fiorentina',502],['Napoli',492],['Torino',503],['Monza',511],['Genoa',507],['Lecce',508],['Cagliari',490],['Udinese',494],['Frosinone',512],['Verona',504],['Empoli',511],['Sassuolo',488],['Salernitana',514]],
+    61: [['PSG',85],['Monaco',91],['Brest',94],['Lille',79],['Nice',84],['Lyon',80],['Lens',116],['Marseille',81],['Reims',93],['Rennais',111],['Toulouse',96],['Le Havre',97],['Montpellier',82],['Nantes',83],['Strasbourg',95],['Metz',112],['Lorient',113],['Clermont',114]],
+  }
+  const teams = tm[lid] || tm[203]
+  return teams.map(([name,id],i)=>({
+    rank:i+1, name, id,
+    pts:Math.max(5,68-i*3+Math.floor(Math.random()*4)),
+    gd:28-i*3, form:['WWWDW','WWDWL','WDWWL','DLWWW','LDWWL'][Math.min(i,4)],
+    played:28, win:Math.max(0,17-i*2), draw:4, lose:Math.max(0,i*2),
+    gf:Math.max(5,44-i*4), ga:Math.max(5,15+i*3),
+  }))
+}
+
+// ═══════════════════════════════════════════════
+// PREDICTION ENGINE
+// ═══════════════════════════════════════════════
+async function loadPredictions() {
+  document.getElementById('match-list').innerHTML = [1,2,3,4].map(()=>`<div class="skeleton sk-card"></div>`).join('')
+
+  let preds
+  if (state.apiKey) {
+    preds = await fetchRealPredictions()
+  }
+  if (!preds || !preds.length) preds = mockPredictions()
+
+  state.predictions = preds
+  updateStats(preds)
+  renderPredictions()
+}
+
+async function fetchRealPredictions() {
+  const today = new Date().toISOString().split('T')[0]
+  const fixtures = await apiFetch('fixtures', {date:today, season:2024})
+  if (!fixtures || !fixtures.length) return null
+
+  setApiStatus(true)
+  const results = []
+
+  for (const fix of fixtures.slice(0,20)) {
+    const fid = fix.fixture.id
+    const pred = await apiFetch('predictions', {fixture:fid})
+    if (!pred || !pred[0]) continue
+
+    const p = pred[0].predictions || {}
+    const pct = v => { try{return parseInt(String(v).replace('%',''))}catch{return 33} }
+    let hp=pct(p.percent?.home), dp=pct(p.percent?.draw), ap=pct(p.percent?.away)
+    const tot=(hp+dp+ap)||100; hp=Math.round(hp/tot*100); dp=Math.round(dp/tot*100); ap=100-hp-dp
+    const mx=Math.max(hp,dp,ap)
+    const pick=mx===hp?'1':mx===dp?'X':'2'
+    const conf=mx
+
+    results.push({
+      id: fid,
+      time: new Date(fix.fixture.date).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'}),
+      home: fix.teams.home.name, homeLogo: fix.teams.home.id,
+      away: fix.teams.away.name, awayLogo: fix.teams.away.id,
+      league: fix.league.name, leagueFlag: '🏆', leagueId: fix.league.id,
+      pick, conf, probs:{home:hp,draw:dp,away:ap},
+      over25: 40+Math.floor(Math.random()*35), kg: Math.random()>0.45,
+      value: conf>=62?'HIGH':conf>=50?'MEDIUM':'LOW',
+      signals:[{type:'api',text:'API Football tahmin motoru'}],
+      odds:{h:+(1.5+Math.random()*2).toFixed(2),x:+(2.8+Math.random()).toFixed(2),a:+(2.2+Math.random()*3).toFixed(2)},
+    })
+  }
+  return results
+}
+
+function updateStats(preds) {
+  const high = preds.filter(p=>p.value==='HIGH').length
+  const avg = preds.length ? Math.round(preds.reduce((a,p)=>a+p.conf,0)/preds.length) : 0
+  document.getElementById('stat-total').textContent = preds.length
+  document.getElementById('stat-high').textContent = high
+  document.getElementById('stat-avg').textContent = avg+'%'
+}
+
+function renderPredictions() {
+  const {activeLeague, filter, predictions} = state
+  const lid = LEAGUES[activeLeague]?.id
+
+  let list = predictions
+  if (lid) list = list.filter(p=>p.leagueId===lid)
+  if (filter==='high') list = list.filter(p=>p.value==='HIGH')
+  if (filter==='medium') list = list.filter(p=>p.value==='MEDIUM')
+
+  const el = document.getElementById('match-list')
+
+  if (!list.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📊</div><h3>Tahmin bulunamadı</h3><p>Farklı bir lig veya filtre deneyin.</p></div>`
+    return
+  }
+
+  el.innerHTML = list.map((p,i) => cardHTML(p,i)).join('')
+
+  // Animate prob bars
+  setTimeout(()=>{
+    list.forEach(p=>{
+      const el = document.getElementById(`pb-h-${p.id}`)
+      if(el) el.style.width=p.probs.home+'%'
+      const el2 = document.getElementById(`pb-d-${p.id}`)
+      if(el2) el2.style.width=p.probs.draw+'%'
+      const el3 = document.getElementById(`pb-a-${p.id}`)
+      if(el3) el3.style.width=p.probs.away+'%'
+    })
+  },100)
+}
+
+function cardHTML(p, i) {
+  const isHigh = p.value==='HIGH'
+  const pickClass = p.pick==='1'?'pick-1':p.pick==='X'?'pick-x':'pick-2'
+  const delay = i*40
+  const isSelected = k => state.picks.some(x=>x.id===p.id&&x.pickKey===k)
+
+  return `
+<div class="match-card${isHigh?' high-value':''}" style="animation-delay:${delay}ms">
+  <div class="card-header">
+    <span class="league-badge">${p.leagueFlag} ${p.league}</span>
+    <div class="card-badges">
+      ${isHigh?'<span class="value-badge">⚡ DEĞER</span>':''}
+      <span class="time-badge">${p.time}</span>
+    </div>
+  </div>
+  <div class="teams-row">
+    <div class="team">
+      ${logoHTML(p.homeLogo,p.home,38)}
+      <span class="team-name">${p.home}</span>
+    </div>
+    <div class="${pickClass} pick-chip">${p.pick}</div>
+    <div class="team away">
+      ${logoHTML(p.awayLogo,p.away,38)}
+      <span class="team-name">${p.away}</span>
+    </div>
+  </div>
+  <div class="prob-bars">
+    <div class="prob-row">
+      <span class="prob-label">1 Ev Sahibi</span>
+      <div class="prob-track"><div class="prob-fill b" id="pb-h-${p.id}" style="width:0%"></div></div>
+      <span class="prob-val">${p.probs.home}%</span>
+    </div>
+    <div class="prob-row">
+      <span class="prob-label">X Beraberlik</span>
+      <div class="prob-track"><div class="prob-fill a" id="pb-d-${p.id}" style="width:0%"></div></div>
+      <span class="prob-val">${p.probs.draw}%</span>
+    </div>
+    <div class="prob-row">
+      <span class="prob-label">2 Deplasman</span>
+      <div class="prob-track"><div class="prob-fill v" id="pb-a-${p.id}" style="width:0%"></div></div>
+      <span class="prob-val">${p.probs.away}%</span>
+    </div>
+  </div>
+  <div class="card-footer">
+    <button class="pick-btn b${isSelected('1')?' selected':''}" onclick="togglePick(${JSON.stringify(p).replace(/"/g,'&quot;')},'1',${p.odds.h})">1 &nbsp;${p.odds.h}</button>
+    <button class="pick-btn a${isSelected('X')?' selected':''}" onclick="togglePick(${JSON.stringify(p).replace(/"/g,'&quot;')},'X',${p.odds.x})">X &nbsp;${p.odds.x}</button>
+    <button class="pick-btn v${isSelected('2')?' selected':''}" onclick="togglePick(${JSON.stringify(p).replace(/"/g,'&quot;')},'2',${p.odds.a})">2 &nbsp;${p.odds.a}</button>
+    <div class="footer-info">
+      <span class="fi">Ü2.5 <span class="amber">${p.over25}%</span></span>
+      <span class="fi">KG <span class="${p.kg?'lime':''}"> ${p.kg?'VAR':'YOK'}</span></span>
+      <span class="fi">Güven <span>${p.conf}%</span></span>
+    </div>
+  </div>
+  ${p.signals.length?`
+  <button class="signals-toggle" onclick="toggleSignals(this)">⚡ ${p.signals.length} analiz sinyali ▾</button>
+  <div class="signals-wrap" style="display:none">
+    ${p.signals.map(s=>`<span class="signal-tag st-${s.type}">${s.type==='form'?'📈':s.type==='xg'?'⚡':s.type==='h2h'?'🔄':s.type==='api'?'🤖':'🏠'} ${s.text}</span>`).join('')}
+  </div>`:''}
+</div>`
+}
+
+function logoHTML(teamId, name, size) {
+  return `<div class="team-logo" style="width:${size}px;height:${size}px">
+    <img src="https://media.api-sports.io/football/teams/${teamId}.png" alt="${name}" style="width:${size-12}px;height:${size-12}px" onerror="this.parentElement.innerHTML='<span class=\\'team-logo-fb\\'>${name.slice(0,2)}</span>'"/>
+  </div>`
+}
+
+function toggleSignals(btn) {
+  const wrap = btn.nextElementSibling
+  const open = wrap.style.display==='flex'
+  wrap.style.display = open?'none':'flex'
+  btn.textContent = btn.textContent.replace(open?'▴':'▾', open?'▾':'▴')
+}
+
+// ═══════════════════════════════════════════════
+// STANDINGS
+// ═══════════════════════════════════════════════
+async function loadStandings(lid) {
+  state.standingsLeague = lid
+  document.getElementById('standings-table').innerHTML = `<div class="skeleton" style="height:400px"></div>`
+
+  let data
+  if (state.apiKey) {
+    const raw = await apiFetch('standings', {league:lid, season:2024})
+    if (raw && raw[0]) {
+      try { data = raw[0].league.standings[0] } catch{}
+    }
+  }
+  if (!data) data = mockStandings(lid)
+
+  renderStandings(data, lid)
+}
+
+function renderStandings(data, lid) {
+  const cols = 'table-cols'
+  const zones = {cl:'#4a9eff',el:'#ffb347',rel:'#f87171',none:'transparent'}
+  const zone = (r,tot) => r<=4?'cl':r<=6?'el':r>=tot-2?'rel':'none'
+
+  const rows = data.map((r,i)=>{
+    const z = zone(r.rank||i+1, data.length)
+    const form = (r.form||'').slice(-5).split('').map(c=>`<div class="fd ${c==='W'?'w':c==='D'?'d':'l'}"></div>`).join('')
+    const gd = (r.gd||r.goalsDiff)||0
+    const all = r.all||{played:r.played,win:r.win,draw:r.draw,lose:r.lose,goals:{for:r.gf,against:r.ga}}
+    return `
+    <div class="table-row ${cols}">
+      <div style="display:flex;align-items:center">
+        <div style="width:3px;height:20px;border-radius:2px;background:${zones[z]};margin-right:6px;flex-shrink:0"></div>
+        <span class="tc muted">${r.rank||i+1}</span>
+      </div>
+      <div class="team-cell">
+        <img class="team-logo-sm" src="https://media.api-sports.io/football/teams/${r.id||r.team?.id}.png"
+          onerror="this.outerHTML='<div class=\\'team-logo-sm-fb\\'>${(r.name||r.team?.name||'').slice(0,2)}</div>'" alt=""/>
+        <span class="team-name-sm">${r.name||r.team?.name||''}</span>
+      </div>
+      <span class="tc muted">${all.played||0}</span>
+      <span class="tc lime">${all.win||0}</span>
+      <span class="tc amber">${all.draw||0}</span>
+      <span class="tc red">${all.lose||0}</span>
+      <span class="tc muted">${all.goals?.for||r.gf||0}</span>
+      <span class="tc muted">${all.goals?.against||r.ga||0}</span>
+      <span class="tc" style="color:${gd>0?'var(--lime)':gd<0?'var(--red)':'var(--muted)'}">${gd>0?'+':''}${gd}</span>
+      <div class="form-dots">${form}</div>
+      <span class="pts" style="color:var(--text)">${r.pts||r.points||0}</span>
+    </div>`
+  }).join('')
+
+  document.getElementById('standings-table').innerHTML = `
+    <div class="table-wrap">
+      <div class="table-header ${cols}">
+        <span>#</span><span>Takım</span><span style="text-align:center">O</span>
+        <span style="text-align:center;color:var(--lime)">G</span>
+        <span style="text-align:center;color:var(--amber)">B</span>
+        <span style="text-align:center;color:var(--red)">M</span>
+        <span style="text-align:center">AG</span><span style="text-align:center">YG</span>
+        <span style="text-align:center">A</span><span style="text-align:center">Form</span>
+        <span style="text-align:right">P</span>
+      </div>
+      ${rows}
+      <div class="legend">
+        <div class="leg-item"><div class="leg-dot" style="background:#4a9eff"></div>Şampiyonlar Ligi</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#ffb347"></div>Avrupa Ligi</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#f87171"></div>Küme Düşme</div>
+      </div>
+    </div>`
+}
+
+function renderStandingsLeagues() {
+  document.getElementById('standings-leagues').innerHTML = STANDINGS_LEAGUES.map(l=>`
+    <button class="lbtn${state.standingsLeague===l.id?' active':''}" onclick="loadStandings(${l.id});document.querySelectorAll('#standings-leagues .lbtn').forEach(b=>b.classList.remove('active'));this.classList.add('active')">
+      ${l.flag} ${l.name}
+    </button>`).join('')
+}
+
+// ═══════════════════════════════════════════════
+// PICKS & COUPONS
+// ═══════════════════════════════════════════════
+function togglePick(pred, pickKey, odd) {
+  const existing = state.picks.findIndex(p=>p.id===pred.id&&p.pickKey===pickKey)
+  const sameMatch = state.picks.findIndex(p=>p.id===pred.id)
+
+  if (existing !== -1) {
+    state.picks.splice(existing,1)
+  } else {
+    if (sameMatch !== -1) state.picks.splice(sameMatch,1)
+    state.picks.push({id:pred.id, home:pred.home, away:pred.away, league:pred.league, pickKey, odd})
+  }
+
+  savePicks()
+  updateCouponTab()
+  renderPredictions()
+}
+
+function savePicks() {
+  localStorage.setItem('fiq_picks', JSON.stringify(state.picks))
+}
+
+function removePick(id) {
+  state.picks = state.picks.filter(p=>p.id!==id)
+  savePicks()
+  updateCouponTab()
+  renderCouponBuilder()
+  renderPredictions()
+}
+
+function updateCouponTab() {
+  const n = state.picks.length
+  const tab = document.getElementById('coupon-tab')
+  const existing = tab.querySelector('.tab-badge')
+  if (existing) existing.remove()
+  if (n>0) tab.innerHTML += `<span class="tab-badge">${n}</span>`
+}
+
+function renderCouponBuilder() {
+  const {picks} = state
+  const listEl = document.getElementById('picks-list')
+  const ctrlEl = document.getElementById('coupon-controls')
+
+  if (!picks.length) {
+    listEl.innerHTML = `<div class="empty-picks"><div class="empty-picks-icon">🎫</div><p>Tahminler sayfasından<br/>seçim yapın</p></div>`
+    ctrlEl.style.display = 'none'
+    return
+  }
+
+  ctrlEl.style.display = 'block'
+
+  listEl.innerHTML = `<div class="picks-list">${picks.map(p=>{
+    const cls = p.pickKey==='1'?'pick-1 b':p.pickKey==='X'?'pick-x a':'pick-2 v'
+    return `<div class="pick-item">
+      <div class="pick-item-info">
+        <div class="pick-item-match">${p.home} — ${p.away}</div>
+        <div class="pick-item-league">${p.league}</div>
+      </div>
+      <span class="pick-item-pick ${cls}">${p.pickKey}</span>
+      <span class="pick-item-odd">${p.odd?.toFixed(2)}</span>
+      <button class="pick-remove" onclick="removePick(${p.id})">×</button>
+    </div>`
+  }).join('')}</div>`
+
+  // Sistem seçenekleri
+  const sysEl = document.getElementById('system-opts')
+  if (state.couponType==='sistem' && picks.length>=3) {
+    const opts = [{k:2,min:3,l:'2/3'},{k:2,min:4,l:'2/4'},{k:3,min:4,l:'3/4'},{k:3,min:5,l:'3/5'},{k:4,min:5,l:'4/5'}]
+    sysEl.style.display='flex'
+    sysEl.innerHTML = opts.filter(o=>o.min<=picks.length).map(o=>`
+      <button class="sys-btn${state.systemK===o.k?' active':''}" onclick="state.systemK=${o.k};document.querySelectorAll('.sys-btn').forEach(b=>b.classList.remove('active'));this.classList.add('active');updateCalc()">${o.l} Sistem</button>`).join('')
+  } else {
+    sysEl.style.display='none'
+  }
+
+  updateCalc()
+}
+
+function updateCalc() {
+  const picks = state.picks
+  const stake = parseFloat(document.getElementById('stake-input')?.value)||100
+  const odd = picks.reduce((a,p)=>a*(p.odd||1),1)
+  document.getElementById('calc-odd').textContent = '×'+odd.toFixed(2)
+  document.getElementById('calc-stake').textContent = stake.toLocaleString('tr-TR')
+  document.getElementById('calc-win').textContent = Math.round(stake*odd).toLocaleString('tr-TR')
+}
+
+function setType(t, btn) {
+  state.couponType = t
+  document.querySelectorAll('.type-btn').forEach(b=>b.classList.remove('active'))
+  btn.classList.add('active')
+  renderCouponBuilder()
+}
+
+function saveCoupon() {
+  if (!state.picks.length) return
+  const name = document.getElementById('coupon-name').value ||
+    `Kupon ${new Date().toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'})}`
+  const odd = state.picks.reduce((a,p)=>a*(p.odd||1),1)
+  const stake = parseFloat(document.getElementById('stake-input').value)||100
+  const c = {
+    id:Date.now(), name, type:state.couponType,
+    picks:[...state.picks], totalOdd:+odd.toFixed(2),
+    stake, win:+(stake*odd).toFixed(0),
+    date:new Date().toLocaleDateString('tr-TR'), status:'pending'
+  }
+  state.coupons.unshift(c)
+  state.picks = []
+  savePicks()
+  localStorage.setItem('fiq_coupons', JSON.stringify(state.coupons))
+  document.getElementById('coupon-name').value = ''
+  updateCouponTab()
+  renderCouponBuilder()
+  renderCouponHistory()
+}
+
+function deleteCoupon(id) {
+  state.coupons = state.coupons.filter(c=>c.id!==id)
+  localStorage.setItem('fiq_coupons', JSON.stringify(state.coupons))
+  renderCouponHistory()
+}
+
+function renderCouponHistory() {
+  const el = document.getElementById('coupon-history')
+  if (!state.coupons.length) {
+    el.innerHTML = `<div class="no-coupons">🎫<br/>Henüz kayıtlı kupon yok</div>`
+    return
+  }
+  const scfg = {
+    pending:{cls:'background:rgba(255,179,71,0.1);border-color:rgba(255,179,71,0.3);color:var(--amber)',label:'⏳ Bekliyor'},
+    won:    {cls:'background:rgba(181,242,58,0.1);border-color:rgba(181,242,58,0.3);color:var(--lime)', label:'🏆 Kazandı'},
+    lost:   {cls:'background:rgba(248,113,113,0.1);border-color:rgba(248,113,113,0.3);color:var(--red)',label:'❌ Kaybetti'},
+  }
+  el.innerHTML = state.coupons.map(c=>{
+    const s = scfg[c.status]||scfg.pending
+    return `<div class="saved-coupon">
+      <div class="sc-header">
+        <div><div class="sc-name">${c.name}</div><div class="sc-date">${c.date} · ${c.type}</div></div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="sc-status" style="${s.cls}">${s.label}</span>
+          <button class="del-btn" onclick="deleteCoupon(${c.id})">🗑</button>
+        </div>
+      </div>
+      <div class="sc-picks">${c.picks.map(p=>{
+        const pc=p.pickKey==='1'?'color:var(--blue)':p.pickKey==='X'?'color:var(--amber)':'color:var(--violet)'
+        return `<div class="sc-pick-row">
+          <span style="${pc};font-family:'JetBrains Mono',monospace;font-weight:800">${p.pickKey}</span>
+          <span style="color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.home} — ${p.away}</span>
+          <span style="font-family:'JetBrains Mono',monospace;color:var(--muted)">${p.odd?.toFixed(2)}</span>
+        </div>`}).join('')}
+      </div>
+      <div class="sc-footer">
+        <div>
+          <div class="sc-odd">×${c.totalOdd}</div>
+          <div class="sc-win">${c.stake} TL → <span>${parseInt(c.win).toLocaleString('tr-TR')} TL</span></div>
+        </div>
+        <div style="display:flex;gap:6px">
+          ${['pending','won','lost'].map(s=>`<button onclick="state.coupons.find(x=>x.id==${c.id}).status='${s}';localStorage.setItem('fiq_coupons',JSON.stringify(state.coupons));renderCouponHistory()"
+            style="padding:4px 10px;border-radius:8px;font-size:10px;font-weight:800;cursor:pointer;border:1px solid var(--line2);background:${c.status===s?'var(--bg4)':'var(--bg3)'};color:${c.status===s?'var(--text)':'var(--muted)'};font-family:'Syne',sans-serif">
+            ${s==='pending'?'Bekliyor':s==='won'?'Kazandı':'Kaybetti'}
+          </button>`).join('')}
+        </div>
+      </div>
+    </div>`
+  }).join('')
+}
+
+async function getAutoCoupon() {
+  const btn = document.getElementById('auto-btn')
+  btn.textContent = '⏳ Yükleniyor...'
+  btn.disabled = true
+
+  await new Promise(r=>setTimeout(r,800))
+  const preds = state.predictions.length ? state.predictions : mockPredictions()
+  const top5 = preds.filter(p=>p.value==='HIGH'||p.conf>=55).slice(0,5)
+
+  top5.forEach(p=>{
+    const pickKey = p.pick
+    const odd = pickKey==='1'?p.odds.h:pickKey==='X'?p.odds.x:p.odds.a
+    if (!state.picks.find(x=>x.id===p.id)) {
+      state.picks.push({id:p.id,home:p.home,away:p.away,league:p.league,pickKey,odd})
+    }
+  })
+
+  savePicks()
+  updateCouponTab()
+  renderCouponBuilder()
+  btn.textContent = '✨ Otomatik Kupon Önerisi'
+  btn.disabled = false
+}
+
+// ═══════════════════════════════════════════════
+// NAV & UI
+// ═══════════════════════════════════════════════
+function switchTab(tab) {
+  state.activeTab = tab
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'))
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'))
+
+  const tabEl = document.querySelector(`.tab[onclick*="${tab}"]`)
+  if (tabEl) tabEl.classList.add('active')
+  document.getElementById(`page-${tab}`)?.classList.add('active')
+
+  document.getElementById('league-bar').style.display = tab==='predictions' ? 'block' : 'none'
+
+  if (tab==='standings') { renderStandingsLeagues(); loadStandings(state.standingsLeague) }
+  if (tab==='coupons') { renderCouponBuilder(); renderCouponHistory() }
+}
+
+function setFilter(f, btn) {
+  state.filter = f
+  document.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('active'))
+  btn.classList.add('active')
+  renderPredictions()
+}
+
+function renderLeagueBar() {
+  document.getElementById('league-btns').innerHTML = Object.entries(LEAGUES).map(([key,l])=>`
+    <button class="lbtn${state.activeLeague===key?' active':''}" onclick="setLeague('${key}',this)">
+      ${l.flag} ${l.name}
+    </button>`).join('')
+}
+
+function setLeague(key, btn) {
+  state.activeLeague = key
+  document.querySelectorAll('#league-btns .lbtn').forEach(b=>b.classList.remove('active'))
+  btn.classList.add('active')
+  renderPredictions()
+}
+
+// ─── API KEY MODAL ───────────────────────────
+function showApiModal() { document.getElementById('api-modal').classList.remove('hidden') }
+function closeApiModal() { document.getElementById('api-modal').classList.add('hidden') }
+function dismissBanner() { document.getElementById('settings-banner').classList.add('hidden') }
+
+async function saveApiKey() {
+  const key = document.getElementById('api-key-input').value.trim()
+  if (!key) return
+
+  const btn = document.querySelector('#api-modal .btn-lime')
+  btn.textContent = 'Test ediliyor...'
+  btn.disabled = true
+
+  const ok = await checkApiKey(key)
+
+  if (ok) {
+    state.apiKey = key
+    localStorage.setItem('fiq_key', key)
+    setApiStatus(true)
+    dismissBanner()
+    closeApiModal()
+    loadPredictions()
+    alert('✅ API bağlantısı başarılı!')
+  } else {
+    alert('❌ API key hatalı. Lütfen kontrol edin.')
+  }
+
+  btn.textContent = 'Kaydet & Bağlan'
+  btn.disabled = false
+}
+
+function setApiStatus(live) {
+  document.getElementById('api-dot').className = 'dot' + (live?' live':'')
+  document.getElementById('api-status-text').textContent = live ? 'Canlı Veri' : 'Demo Mod'
+}
+
+// ─── INIT ────────────────────────────────────
+function init() {
+  renderLeagueBar()
+  if (state.apiKey) {
+    setApiStatus(true)
+    dismissBanner()
+    document.getElementById('api-key-input').value = state.apiKey
+  }
+  loadPredictions()
+  updateCouponTab()
+
+  // ESC modal kapat
+  document.addEventListener('keydown', e => { if(e.key==='Escape') closeApiModal() })
+  document.getElementById('api-modal').addEventListener('click', e => { if(e.target===e.currentTarget) closeApiModal() })
+}
+
+init()
+</script>
+</body>
+</html>
