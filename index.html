@@ -456,32 +456,40 @@ const FD_LEAGUE_IDS = {
   'CL': 2, 'EL': 3
 }
 
+// CORS proxy — football-data.org github.io'dan direkt erişime kapalı
+// corsproxy.io ücretsiz ve güvenilir proxy kullanıyoruz
+const PROXY = 'https://corsproxy.io/?url='
+
 async function fdFetch(path, params={}) {
   if (!state.apiKey) return null
   const url = new URL(`${FDAPI}/${path}`)
   Object.entries(params).forEach(([k,v]) => url.searchParams.set(k,v))
+  const proxied = PROXY + encodeURIComponent(url.toString())
   try {
-    const r = await fetch(url, {
+    const r = await fetch(proxied, {
       headers: { 'X-Auth-Token': state.apiKey }
     })
     if (!r.ok) {
       const err = await r.json().catch(()=>({}))
-      console.error('FD API Hata:', r.status, err.message)
+      console.error('FD API Hata:', r.status, err.message || err)
       if (r.status === 429) {
         document.getElementById('api-status-text').textContent = 'Limit Asildi'
         document.getElementById('api-dot').style.background = '#f87171'
       }
       return null
     }
-    return await r.json()
-  } catch(e) { console.error('Baglanti hatasi:', e.message); return null }
+    const data = await r.json()
+    return data
+  } catch(e) {
+    console.error('Baglanti hatasi:', e.message)
+    return null
+  }
 }
 
 async function checkApiKey(key) {
   try {
-    const r = await fetch(`${FDAPI}/competitions`, {
-      headers: { 'X-Auth-Token': key }
-    })
+    const url = PROXY + encodeURIComponent(`${FDAPI}/competitions`)
+    const r = await fetch(url, { headers: { 'X-Auth-Token': key } })
     return r.ok
   } catch { return false }
 }
