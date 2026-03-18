@@ -302,7 +302,7 @@ html,body{height:100%;background:var(--bg0);color:var(--text);font-family:'Syne'
     <div class="settings-banner-icon">🔑</div>
     <div class="settings-banner-text">
       <h3>API Key Ekle — Gerçek Veriler İçin</h3>
-      <p>Şu an demo veriler gösteriliyor. api-sports.io'dan ücretsiz key alarak gerçek maç tahminlerini görebilirsiniz.</p>
+      <p>Şu an demo veriler gösteriliyor. <strong>football-data.org</strong>'dan ücretsiz key alarak güncel maç verilerini görebilirsiniz.</p>
     </div>
     <div class="settings-banner-actions">
       <button class="btn btn-lime" onclick="showApiModal()">Key Ekle</button>
@@ -382,9 +382,9 @@ html,body{height:100%;background:var(--bg0);color:var(--text);font-family:'Syne'
   <div class="modal">
     <h2>🔑 API Key Ekle</h2>
     <p>
-      <a href="https://dashboard.api-sports.io" target="_blank" style="color:var(--lime)">dashboard.api-sports.io</a> adresine giriş yapın.<br/>
-      Sol menüden <strong>Football → API Key</strong> bölümüne gidin ve key'inizi kopyalayın.<br/>
-      Ücretsiz planda günlük <strong>100 istek</strong> hakkınız var.
+      <a href="https://www.football-data.org/client/register" target="_blank" style="color:var(--lime)">football-data.org</a> adresine gidin ve ücretsiz kayıt olun.<br/>
+      Email ile gelen API key'i aşağıya yapıştırın.<br/>
+      Ücretsiz planda dakikada <strong>10 istek</strong> — Premier League, La Liga, Bundesliga, Serie A, Ligue 1, Şampiyonlar Ligi dahil.
     </p>
     <input type="text" class="modal-input" id="api-key-input" placeholder="8e06845a0b992..." />
     <div class="modal-actions">
@@ -434,52 +434,55 @@ const STANDINGS_LEAGUES = [
 ]
 
 // ═══════════════════════════════════════════════
-// API
+// API — football-data.org (ücretsiz, güncel)
 // ═══════════════════════════════════════════════
-const API = 'https://v3.football.api-sports.io'
+const FDAPI = 'https://api.football-data.org/v4'
 
-async function apiFetch(endpoint, params={}) {
+// football-data.org lig kodları
+const FD_LEAGUES = {
+  203: 'BSL',   // Süper Lig (BSL)
+  39:  'PL',    // Premier League
+  140: 'PD',    // La Liga
+  78:  'BL1',   // Bundesliga
+  135: 'SA',    // Serie A
+  61:  'FL1',   // Ligue 1
+  2:   'CL',    // Champions League
+  3:   'EL',    // Europa League
+}
+
+const FD_LEAGUE_IDS = {
+  'BSL': 203, 'PL': 39, 'PD': 140,
+  'BL1': 78, 'SA': 135, 'FL1': 61,
+  'CL': 2, 'EL': 3
+}
+
+async function fdFetch(path, params={}) {
   if (!state.apiKey) return null
-  const url = new URL(`${API}/${endpoint}`)
+  const url = new URL(`${FDAPI}/${path}`)
   Object.entries(params).forEach(([k,v]) => url.searchParams.set(k,v))
   try {
     const r = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'x-apisports-key': state.apiKey,
-        'x-rapidapi-key': state.apiKey,
-        'x-rapidapi-host': 'v3.football.api-sports.io'
-      }
+      headers: { 'X-Auth-Token': state.apiKey }
     })
-    const d = await r.json()
-    if (d.errors && Object.keys(d.errors).length) {
-      const errMsg = JSON.stringify(d.errors)
-      console.error('API Hatasi:', errMsg)
-      if (errMsg.includes('limit') || errMsg.includes('quota') || errMsg.includes('requests')) {
+    if (!r.ok) {
+      const err = await r.json().catch(()=>({}))
+      console.error('FD API Hata:', r.status, err.message)
+      if (r.status === 429) {
         document.getElementById('api-status-text').textContent = 'Limit Asildi'
         document.getElementById('api-dot').style.background = '#f87171'
       }
       return null
     }
-    return d.response || []
+    return await r.json()
   } catch(e) { console.error('Baglanti hatasi:', e.message); return null }
 }
 
 async function checkApiKey(key) {
   try {
-    const r = await fetch(`${API}/status`, {
-      headers: {
-        'x-apisports-key': key,
-        'x-rapidapi-key': key,
-        'x-rapidapi-host': 'v3.football.api-sports.io'
-      }
+    const r = await fetch(`${FDAPI}/competitions`, {
+      headers: { 'X-Auth-Token': key }
     })
-    const d = await r.json()
-    if (d.errors && Object.keys(d.errors).length) return false
-    const rem = d.response?.requests?.current
-    const lim = d.response?.requests?.limit_day
-    if (rem !== undefined) console.log('Kalan istek:', rem + '/' + lim)
-    return true
+    return r.ok
   } catch { return false }
 }
 
@@ -550,14 +553,11 @@ async function loadPredictions() {
   document.getElementById('match-list').innerHTML = [1,2,3,4].map(()=>`<div class="skeleton sk-card"></div>`).join('')
 
   let preds = null
-  let isReal = false
 
   if (state.apiKey) {
     preds = await fetchRealPredictions()
-    isReal = preds && preds.length > 0
   }
 
-  // API key var ama maç yok → gerçekten maç yok mesajı göster
   if (state.apiKey && preds !== null && preds.length === 0) {
     state.predictions = []
     updateStats([])
@@ -566,15 +566,13 @@ async function loadPredictions() {
       <div class="empty-state">
         <div class="empty-state-icon">📅</div>
         <h3>Bugün Maç Yok</h3>
-        <p>${today} tarihinde seçili liglerde programlanmış maç bulunmuyor.<br/>Yarın tekrar kontrol edin.</p>
+        <p>${today} tarihinde programlanmış maç bulunmuyor.<br/>Yarın tekrar kontrol edin.</p>
       </div>`
     return
   }
 
-  // API key yok → demo veriler
   if (!preds || !preds.length) {
     preds = mockPredictions()
-    // Demo olduğunu belirt
     document.getElementById('api-status-text').textContent = 'Demo Veri'
   }
 
@@ -589,73 +587,63 @@ const LEAGUE_FLAGS = {
 }
 
 async function fetchRealPredictions() {
+  // football-data.org — bugünün tüm maçlarını çek
   const today = new Date().toISOString().split('T')[0]
-
-  // Önce 2025, olmadı 2024 dene
-  let fixtures = await apiFetch('fixtures', {date:today, season:2025})
-  if (!fixtures || !fixtures.length) {
-    fixtures = await apiFetch('fixtures', {date:today, season:2024})
-  }
-  if (!fixtures || !fixtures.length) return []
+  const data = await fdFetch('matches', {dateFrom: today, dateTo: today})
+  if (!data || !data.matches) return []
 
   setApiStatus(true)
   const results = []
 
-  for (const fix of fixtures.slice(0,15)) {
-    const fid = fix.fixture.id
-    const pred = await apiFetch('predictions', {fixture:fid})
-    if (!pred || !pred[0]) {
-      // Predictions yoksa fixture'dan tahmin üret
-      results.push(buildFromFixture(fix))
-      continue
-    }
+  for (const m of data.matches) {
+    // Sadece desteklenen ligler
+    const leagueId = FD_LEAGUE_IDS[m.competition?.code] || 0
+    if (!leagueId) continue
 
-    const p = pred[0].predictions || {}
-    const pct = v => { try{return parseInt(String(v).replace('%',''))}catch{return 33} }
-    let hp=pct(p.percent?.home||'33%'), dp=pct(p.percent?.draw||'33%'), ap=pct(p.percent?.away||'33%')
-    const tot=(hp+dp+ap)||100
-    hp=Math.round(hp/tot*100); dp=Math.round(dp/tot*100); ap=100-hp-dp
-    const mx=Math.max(hp,dp,ap)
-    const pick=mx===hp?'1':mx===dp?'X':'2'
-    const conf=mx
+    const status = m.status // TIMED, IN_PLAY, FINISHED, SCHEDULED
+    if (status === 'FINISHED') continue // Biten maçları atla
+
+    // Basit tahmin — ev sahibi avantajı + seed
+    const seed = (m.homeTeam.id + m.awayTeam.id) % 30
+    const home = 45 + seed
+    const draw = Math.floor((100-home)*0.38)
+    const away = 100-home-draw
+    const mx = Math.max(home,draw,away)
+    const pick = mx===home?'1':mx===draw?'X':'2'
+    const conf = mx
+
+    const matchTime = new Date(m.utcDate)
+    const timeStr = matchTime.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'})
 
     results.push({
-      id: fid,
-      time: new Date(fix.fixture.date).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'}),
-      home: fix.teams.home.name, homeLogo: fix.teams.home.id,
-      away: fix.teams.away.name, awayLogo: fix.teams.away.id,
-      league: fix.league.name,
-      leagueFlag: LEAGUE_FLAGS[fix.league.id] || '🏆',
-      leagueId: fix.league.id,
-      pick, conf, probs:{home:hp,draw:dp,away:ap},
-      over25: 40+Math.floor(Math.random()*35), kg: Math.random()>0.45,
+      id: m.id,
+      time: timeStr,
+      home: m.homeTeam.name,
+      homeLogo: m.homeTeam.id,
+      away: m.awayTeam.name,
+      awayLogo: m.awayTeam.id,
+      league: m.competition.name,
+      leagueFlag: LEAGUE_FLAGS[leagueId] || '🏆',
+      leagueId,
+      pick, conf,
+      probs: {home, draw, away},
+      over25: 38 + (seed % 35),
+      kg: (seed % 3) !== 0,
       value: conf>=62?'HIGH':conf>=50?'MEDIUM':'LOW',
-      signals:[{type:'api',text:'API Football tahmin motoru kullanıldı'}],
-      odds:{h:+(1.5+Math.random()*2).toFixed(2),x:+(2.8+Math.random()).toFixed(2),a:+(2.2+Math.random()*3).toFixed(2)},
+      signals: [
+        {type:'home', text:'Ev sahibi avantajı'},
+        {type:'form', text:'football-data.org verisi kullanılıyor'},
+      ],
+      odds: {
+        h: +(1.4 + (seed*0.07)).toFixed(2),
+        x: +(2.8 + (seed*0.03)).toFixed(2),
+        a: +(2.1 + (seed*0.11)).toFixed(2),
+      },
     })
   }
-  return results
-}
 
-function buildFromFixture(fix) {
-  // Predictions endpoint'i yoksa basit tahmin üret
-  const conf = 48 + Math.floor(Math.random()*20)
-  const home = conf, draw = Math.floor((100-conf)*0.4), away = 100-home-draw
-  const pick = home>=draw&&home>=away?'1':draw>=away?'X':'2'
-  return {
-    id: fix.fixture.id,
-    time: new Date(fix.fixture.date).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'}),
-    home: fix.teams.home.name, homeLogo: fix.teams.home.id,
-    away: fix.teams.away.name, awayLogo: fix.teams.away.id,
-    league: fix.league.name,
-    leagueFlag: LEAGUE_FLAGS[fix.league.id] || '🏆',
-    leagueId: fix.league.id,
-    pick, conf, probs:{home,draw,away},
-    over25: 35+Math.floor(Math.random()*40), kg: Math.random()>0.5,
-    value: conf>=62?'HIGH':conf>=50?'MEDIUM':'LOW',
-    signals:[{type:'home',text:'Ev sahibi avantajı'}],
-    odds:{h:+(1.5+Math.random()*2).toFixed(2),x:+(2.8+Math.random()).toFixed(2),a:+(2.2+Math.random()*3).toFixed(2)},
-  }
+  console.log('Bugün', results.length, 'maç bulundu')
+  return results
 }
 
 function updateStats(preds) {
@@ -778,16 +766,30 @@ async function loadStandings(lid) {
   state.standingsLeague = lid
   document.getElementById('standings-table').innerHTML = `<div class="skeleton" style="height:400px"></div>`
 
-  let data
+  let data = null
   if (state.apiKey) {
-    let raw = await apiFetch('standings', {league:lid, season:2025})
-    if (!raw || !raw.length) raw = await apiFetch('standings', {league:lid, season:2024})
-    if (raw && raw[0]) {
-      try { data = raw[0].league.standings[0] } catch{}
+    const code = FD_LEAGUES[lid]
+    if (code) {
+      const raw = await fdFetch(`competitions/${code}/standings`)
+      if (raw && raw.standings) {
+        try {
+          const table = raw.standings.find(s=>s.type==='TOTAL')?.table || []
+          data = table.map((r,i) => ({
+            rank: r.position,
+            name: r.team.name,
+            id: r.team.id,
+            pts: r.points,
+            gd: r.goalDifference,
+            form: (r.form||'').replace(/,/g,'').slice(-5),
+            played: r.playedGames,
+            win: r.won, draw: r.draw, lose: r.lost,
+            gf: r.goalsFor, ga: r.goalsAgainst,
+          }))
+        } catch(e) { console.error('Standings parse err:', e) }
+      }
     }
   }
   if (!data) data = mockStandings(lid)
-
   renderStandings(data, lid)
 }
 
