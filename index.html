@@ -456,42 +456,58 @@ const FD_LEAGUE_IDS = {
   'CL': 2, 'EL': 3
 }
 
-// CORS proxy — football-data.org github.io'dan direkt erişime kapalı
-// corsproxy.io ücretsiz ve güvenilir proxy kullanıyoruz
-const PROXY = 'https://corsproxy.io/?url='
+// CORS proxy listesi — sırayla dener, ilk çalışanı kullanır
+const PROXIES = [
+  url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+  url => `https://thingproxy.freeboard.io/fetch/${url}`,
+  url => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
+]
 
 async function fdFetch(path, params={}) {
   if (!state.apiKey) return null
   const url = new URL(`${FDAPI}/${path}`)
   Object.entries(params).forEach(([k,v]) => url.searchParams.set(k,v))
-  const proxied = PROXY + encodeURIComponent(url.toString())
-  try {
-    const r = await fetch(proxied, {
-      headers: { 'X-Auth-Token': state.apiKey }
-    })
-    if (!r.ok) {
-      const err = await r.json().catch(()=>({}))
-      console.error('FD API Hata:', r.status, err.message || err)
-      if (r.status === 429) {
-        document.getElementById('api-status-text').textContent = 'Limit Asildi'
-        document.getElementById('api-dot').style.background = '#f87171'
+  const targetUrl = url.toString()
+
+  for (const makeProxy of PROXIES) {
+    try {
+      const proxied = makeProxy(targetUrl)
+      const r = await fetch(proxied, {
+        headers: { 'X-Auth-Token': state.apiKey },
+        signal: AbortSignal.timeout(8000)
+      })
+      if (!r.ok) {
+        if (r.status === 429) {
+          document.getElementById('api-status-text').textContent = 'Limit Asildi'
+          document.getElementById('api-dot').style.background = '#f87171'
+          return null
+        }
+        continue
       }
-      return null
+      const data = await r.json()
+      console.log(`✅ Proxy OK: ${proxied.slice(0,40)}...`)
+      return data
+    } catch(e) {
+      console.warn(`Proxy failed, trying next... ${e.message}`)
+      continue
     }
-    const data = await r.json()
-    return data
-  } catch(e) {
-    console.error('Baglanti hatasi:', e.message)
-    return null
   }
+  console.error('Tum proxy'ler basarisiz oldu')
+  return null
 }
 
 async function checkApiKey(key) {
-  try {
-    const url = PROXY + encodeURIComponent(`${FDAPI}/competitions`)
-    const r = await fetch(url, { headers: { 'X-Auth-Token': key } })
-    return r.ok
-  } catch { return false }
+  for (const makeProxy of PROXIES) {
+    try {
+      const proxied = makeProxy(`${FDAPI}/competitions`)
+      const r = await fetch(proxied, {
+        headers: { 'X-Auth-Token': key },
+        signal: AbortSignal.timeout(6000)
+      })
+      if (r.ok) return true
+    } catch { continue }
+  }
+  return false
 }
 
 // ═══════════════════════════════════════════════
