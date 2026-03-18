@@ -443,18 +443,43 @@ async function apiFetch(endpoint, params={}) {
   const url = new URL(`${API}/${endpoint}`)
   Object.entries(params).forEach(([k,v]) => url.searchParams.set(k,v))
   try {
-    const r = await fetch(url, {headers:{'x-rapidapi-key':state.apiKey,'x-rapidapi-host':'v3.football.api-sports.io'}})
+    const r = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'x-apisports-key': state.apiKey,
+        'x-rapidapi-key': state.apiKey,
+        'x-rapidapi-host': 'v3.football.api-sports.io'
+      }
+    })
     const d = await r.json()
-    if (d.errors && Object.keys(d.errors).length) { console.warn('API err',d.errors); return null }
+    if (d.errors && Object.keys(d.errors).length) {
+      const errMsg = JSON.stringify(d.errors)
+      console.error('API Hatasi:', errMsg)
+      if (errMsg.includes('limit') || errMsg.includes('quota') || errMsg.includes('requests')) {
+        document.getElementById('api-status-text').textContent = 'Limit Asildi'
+        document.getElementById('api-dot').style.background = '#f87171'
+      }
+      return null
+    }
     return d.response || []
-  } catch(e) { console.error('fetch err',e); return null }
+  } catch(e) { console.error('Baglanti hatasi:', e.message); return null }
 }
 
 async function checkApiKey(key) {
   try {
-    const r = await fetch(`${API}/status`, {headers:{'x-rapidapi-key':key,'x-rapidapi-host':'v3.football.api-sports.io'}})
+    const r = await fetch(`${API}/status`, {
+      headers: {
+        'x-apisports-key': key,
+        'x-rapidapi-key': key,
+        'x-rapidapi-host': 'v3.football.api-sports.io'
+      }
+    })
     const d = await r.json()
-    return !d.errors || Object.keys(d.errors).length === 0
+    if (d.errors && Object.keys(d.errors).length) return false
+    const rem = d.response?.requests?.current
+    const lim = d.response?.requests?.limit_day
+    if (rem !== undefined) console.log('Kalan istek:', rem + '/' + lim)
+    return true
   } catch { return false }
 }
 
